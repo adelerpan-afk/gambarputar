@@ -1,54 +1,108 @@
-const CACHE_NAME = 'shape-rotator-v2';
-const ASSETS_TO_CACHE = [
-  './index.html',
-  './manifest.json'
-];
+/**
+ * Service Worker — Shape Image Rotator
+ * Strategi:
+ *   - Navigasi (mode === 'navigate') → network-first, fallback ke cache / index.html
+ *   - Aset statis lain (same-origin GET) → stale-while-revalidate
+ */
 
-// Pasang & simpan file inti
-self.addEventListener('install', event => {
+const CACHE_VERSION = 'v3';
+const STATIC_CACHE = `shape-rotator-static-${CACHE_VERSION}`;
+const PRECACHE_URLS = ['./', './index.html', './manifest.json'];
+
+// ---------------------------------------------------------------
+// Install: precache aset inti (toleran jika satu URL gagal)
+// ---------------------------------------------------------------
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[SW] Menyimpan file inti ke cache');
-        return cache.addAll(ASSETS_TO_CACHE);
-      })
+    caches
+      .open(STATIC_CACHE)
+      .then((cache) =>
+        Promise.all(
+          PRECACHE_URLS.map((url) =>
+            cache
+              .add(url)
+              .catch((err) => console.warn('[SW] Precache gagal:', url, err))
+          )
+        )
+      )
       .then(() => self.skipWaiting())
   );
 });
 
-// Hapus cache lama saat ada versi baru
-self.addEventListener('activate', event => {
+// ---------------------------------------------------------------
+// Activate: hapus cache versi lama
+// ---------------------------------------------------------------
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => key !== STATIC_CACHE)
+            .map((key) => caches.delete(key))
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
-// Ambil dari cache dulu, jika tidak ada ambil dari jaringan
-self.addEventListener('fetch', event => {
-  // Lewati permintaan yang butuh data dinamis / pustaka eksternal
-  const url = event.request.url;
-  if (url.includes('cdn.jsdelivr.net') || url.includes('blob:') || url.includes('data:')) {
-    return; // lewati, ambil langsung dari jaringan
+// ---------------------------------------------------------------
+// Fetch: routing strategi
+// ---------------------------------------------------------------
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+
+  // Hanya tangani GET (cache.put() akan error untuk POST/PUT, dsb.)
+  if (request.method !== 'GET') return;
+
+  // Hanya same-origin; library CDN (esm.run) langsung ke jaringan
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request, './index.html'));
+    return;
   }
 
-  event.respondWith(
-    caches.match(event.request)
-      .then(cachedResponse => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(event.request)
-          .then(networkResponse => {
-            // Simpan salinan ke cache untuk kunjungan berikutnya
-            return caches.open(CACHE_NAME).then(cache => {
-              cache.put(event.request, networkResponse.clone());
-              return networkResponse;
-            });
-          });
-      })
-  );
+  event.respondWith(staleWhileRevalidate(request));
 });
+
+// ---------------------------------------------------------------
+// Strategi: network-first (untuk navigasi / HTML)
+// ---------------------------------------------------------------
+async function networkFirst(request, fallbackUrl) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const copy = response.clone();
+      caches.open(STATIC_CACHE).then((cache) => cache.put(request, copy));
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+
+    const fallback = await caches.match(fallbackUrl);
+    if (fallback) return fallback;
+
+    return new Response('Offline', { status: 503, statusText: 'Offline' });
+  }
+}
+
+// ---------------------------------------------------------------
+// Strategi: stale-while-revalidate (untuk aset statis)
+// ---------------------------------------------------------------
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  const cached = await cache.match(request);
+
+  const networkPromise = fetch(request)
+    .then((response) => {
+      if (response && response.ok) cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => cached);
+
+  return cached || networkPromise;
+}
