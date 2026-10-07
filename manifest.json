@@ -1,24 +1,18 @@
 {
   "name": "Shape Rotator — Pembuat Video Putar",
   "short_name": "Shape Rotator",
-  "description": "Buat efek putar bingkai pada gambar, ekspor video MP4/WebM langsung di browser",
+  "description": "Buat efek putar bingkai pada gambar, ekspor video MP4 langsung di browser.",
   "start_url": "./index.html",
-  "display": "standalone",
   "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#1a1a2e",
   "theme_color": "#e94560",
-  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%3E%3Crect%20width='512'%20height='512'%20fill='%231a1a2e'/%3E%3Ccircle%20cx='256'%20cy='256'%20r='170'%20fill='none'%20stroke='%23e94560'%20stroke-width='34'/%3E%3Cpath%20d='M256%2086%20A170%20170%200%200%201%20426%20256'%20fill='none'%20stroke='%23f5a623'%20stroke-width='34'%20stroke-linecap='round'/%3E%3C/svg%3E",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
