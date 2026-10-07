@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shape Image Rotator - MP4 Export</title>
+    <title>Shape Image Rotator - 2 Objects</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -19,10 +15,7 @@
             padding: 20px;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+        .container { max-width: 1200px; margin: 0 auto; }
 
         h1 {
             text-align: center;
@@ -36,7 +29,7 @@
 
         .main-layout {
             display: grid;
-            grid-template-columns: 300px 1fr;
+            grid-template-columns: 320px 1fr;
             gap: 30px;
             align-items: start;
         }
@@ -57,9 +50,7 @@
             padding-bottom: 8px;
         }
 
-        .form-group {
-            margin-bottom: 16px;
-        }
+        .form-group { margin-bottom: 16px; }
 
         .form-group label {
             display: block;
@@ -73,7 +64,7 @@
         .upload-area {
             border: 2px dashed rgba(233, 69, 96, 0.5);
             border-radius: 12px;
-            padding: 30px 20px;
+            padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
@@ -86,37 +77,78 @@
         }
 
         .upload-area svg {
-            width: 40px;
-            height: 40px;
-            margin-bottom: 10px;
+            width: 36px;
+            height: 36px;
+            margin-bottom: 8px;
             fill: #e94560;
         }
 
-        .upload-area p {
-            font-size: 0.85em;
-            color: #888;
+        .upload-area p { font-size: 0.85em; color: #888; }
+
+        #fileInput { display: none; }
+
+        /* Object Tabs */
+        .object-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
         }
 
-        #fileInput {
-            display: none;
+        .tab-btn {
+            padding: 12px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #aaa;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .tab-btn:hover {
+            border-color: rgba(233, 69, 96, 0.5);
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.2), rgba(245, 166, 35, 0.2));
+            border-color: #e94560;
+            color: #fff;
+        }
+
+        .tab-btn .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .tab-btn.active .dot {
+            box-shadow: 0 0 8px currentColor;
         }
 
         .shape-selector {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            gap: 6px;
         }
 
         .shape-btn {
             background: rgba(255, 255, 255, 0.05);
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 10px;
-            padding: 12px 8px;
+            padding: 10px 6px;
             cursor: pointer;
             transition: all 0.3s;
             text-align: center;
             color: #ccc;
-            font-size: 0.75em;
+            font-size: 0.7em;
         }
 
         .shape-btn:hover {
@@ -131,10 +163,10 @@
         }
 
         .shape-btn svg {
-            width: 30px;
-            height: 30px;
+            width: 26px;
+            height: 26px;
             display: block;
-            margin: 0 auto 6px;
+            margin: 0 auto 4px;
             fill: none;
             stroke: currentColor;
             stroke-width: 2;
@@ -202,51 +234,16 @@
             gap: 8px;
         }
 
-        .btn-play {
-            background: linear-gradient(135deg, #00b894, #00cec9);
-            color: #fff;
-        }
+        .btn-play { background: linear-gradient(135deg, #00b894, #00cec9); color: #fff; }
+        .btn-play:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0, 184, 148, 0.4); }
+        .btn-stop { background: linear-gradient(135deg, #e94560, #f093fb); color: #fff; }
+        .btn-stop:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4); }
+        .btn-export { background: linear-gradient(135deg, #f5a623, #f7971e); color: #fff; }
+        .btn-export:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(245, 166, 35, 0.4); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
-        .btn-play:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0, 184, 148, 0.4);
-        }
-
-        .btn-stop {
-            background: linear-gradient(135deg, #e94560, #f093fb);
-            color: #fff;
-        }
-
-        .btn-stop:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
-        }
-
-        .btn-export {
-            background: linear-gradient(135deg, #f5a623, #f7971e);
-            color: #fff;
-        }
-
-        .btn-export:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(245, 166, 35, 0.4);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .export-panel {
-            margin-top: 20px;
-        }
-
-        .export-panel .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
+        .export-panel { margin-top: 20px; }
+        .export-panel .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
         .progress-bar {
             width: 100%;
@@ -258,9 +255,7 @@
             display: none;
         }
 
-        .progress-bar.active {
-            display: block;
-        }
+        .progress-bar.active { display: block; }
 
         .progress-fill {
             height: 100%;
@@ -290,11 +285,7 @@
             accent-color: #e94560;
         }
 
-        .checkbox-group label {
-            font-size: 0.85em;
-            color: #ccc;
-            margin: 0;
-        }
+        .checkbox-group label { font-size: 0.85em; color: #ccc; margin: 0; }
 
         select {
             width: 100%;
@@ -307,26 +298,10 @@
             outline: none;
         }
 
-        select:focus {
-            border-color: #e94560;
-        }
+        select:focus { border-color: #e94560; }
+        select option { background: #1a1a2e; color: #fff; }
 
-        select option {
-            background: #1a1a2e;
-            color: #fff;
-        }
-
-        @media (max-width: 768px) {
-            .main-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .color-input-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .color-input-wrapper { display: flex; align-items: center; gap: 8px; }
 
         input[type="color"] {
             width: 40px;
@@ -348,60 +323,108 @@
             display: none;
         }
 
-        .warning-box.show {
-            display: block;
+        .warning-box.show { display: block; }
+
+        .position-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .position-btn {
+            padding: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #aaa;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s;
+        }
+
+        .position-btn.active {
+            border-color: #e94560;
+            background: rgba(233, 69, 96, 0.15);
+            color: #fff;
+        }
+
+        @media (max-width: 768px) {
+            .main-layout { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎨 Shape Image Rotator - MP4 Export</h1>
+        <h1>🎨 Shape Image Rotator - 2 Objects</h1>
 
         <div class="main-layout">
-            <!-- Left Panel - Controls -->
+            <!-- Left Panel -->
             <div class="panel">
                 <h2>📁 Upload Gambar</h2>
                 <div class="upload-area" id="uploadArea">
                     <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                     <p>Klik atau drag gambar kesini</p>
-                    <p style="margin-top:4px; font-size:0.75em; color:#666">Rasio 9:16</p>
                 </div>
                 <input type="file" id="fileInput" accept="image/*">
 
-                <h2>🔷 Pilih Bentuk</h2>
-                <div class="shape-selector">
-                    <div class="shape-btn active" data-shape="circle">
-                        <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15"/></svg>
-                        Lingkaran
-                    </div>
-                    <div class="shape-btn" data-shape="triangle">
-                        <svg viewBox="0 0 40 40"><polygon points="20,5 35,35 5,35"/></svg>
-                        Segitiga
-                    </div>
-                    <div class="shape-btn" data-shape="cube">
-                        <svg viewBox="0 0 40 40"><rect x="8" y="8" width="24" height="24"/></svg>
-                        Kubus
-                    </div>
-                    <div class="shape-btn" data-shape="prism">
-                        <svg viewBox="0 0 40 40"><polygon points="20,5 35,15 35,30 20,35 5,30 5,15"/></svg>
-                        Prisma
-                    </div>
-                    <div class="shape-btn" data-shape="hexagon">
-                        <svg viewBox="0 0 40 40"><polygon points="20,3 35,11 35,27 20,35 5,27 5,11"/></svg>
-                        Segi 6
-                    </div>
-                    <div class="shape-btn" data-shape="star">
-                        <svg viewBox="0 0 40 40"><polygon points="20,3 24,15 37,15 27,23 30,35 20,28 10,35 13,23 3,15 16,15"/></svg>
-                        Bintang
+                <!-- Object Tabs -->
+                <h2>🎯 Pilih Objek</h2>
+                <div class="object-tabs">
+                    <button class="tab-btn active" data-obj="A" onclick="switchObject('A')">
+                        <span class="dot"></span> Objek A (Atas)
+                    </button>
+                    <button class="tab-btn" data-obj="B" onclick="switchObject('B')">
+                        <span class="dot"></span> Objek B (Bawah)
+                    </button>
+                </div>
+
+                <!-- Position -->
+                <div class="form-group">
+                    <label>Posisi Vertikal</label>
+                    <div class="position-group">
+                        <button class="position-btn active" data-pos="top" onclick="setPosition('top')">⬆️ Atas</button>
+                        <button class="position-btn" data-pos="bottom" onclick="setPosition('bottom')">⬇️ Bawah</button>
                     </div>
                 </div>
 
-                <h2 style="margin-top:20px">⚙️ Pengaturan</h2>
+                <!-- Shape -->
+                <div class="form-group">
+                    <label>Bentuk</label>
+                    <div class="shape-selector" id="shapeSelector">
+                        <div class="shape-btn active" data-shape="circle">
+                            <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="15"/></svg>
+                            Lingkaran
+                        </div>
+                        <div class="shape-btn" data-shape="triangle">
+                            <svg viewBox="0 0 40 40"><polygon points="20,5 35,35 5,35"/></svg>
+                            Segitiga
+                        </div>
+                        <div class="shape-btn" data-shape="cube">
+                            <svg viewBox="0 0 40 40"><rect x="8" y="8" width="24" height="24"/></svg>
+                            Kubus
+                        </div>
+                        <div class="shape-btn" data-shape="prism">
+                            <svg viewBox="0 0 40 40"><polygon points="20,5 35,15 35,30 20,35 5,30 5,15"/></svg>
+                            Prisma
+                        </div>
+                        <div class="shape-btn" data-shape="hexagon">
+                            <svg viewBox="0 0 40 40"><polygon points="20,3 35,11 35,27 20,35 5,27 5,11"/></svg>
+                            Segi 6
+                        </div>
+                        <div class="shape-btn" data-shape="star">
+                            <svg viewBox="0 0 40 40"><polygon points="20,3 24,15 37,15 27,23 30,35 20,28 10,35 13,23 3,15 16,15"/></svg>
+                            Bintang
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings for active object -->
+                <h2>⚙️ Pengaturan <span id="activeLabel" style="color:#f5a623">Objek A</span></h2>
 
                 <div class="form-group">
                     <label>Ukuran Objek</label>
-                    <input type="range" id="sizeSlider" min="50" max="400" value="200">
-                    <div class="range-value" id="sizeValue">200px</div>
+                    <input type="range" id="sizeSlider" min="50" max="400" value="180">
+                    <div class="range-value" id="sizeValue">180px</div>
                 </div>
 
                 <div class="form-group">
@@ -419,7 +442,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Warna Border Objek</label>
+                    <label>Warna Border</label>
                     <div class="color-input-wrapper">
                         <input type="color" id="borderColor" value="#e94560">
                         <span style="font-size:0.85em; color:#aaa">Border shape</span>
@@ -437,67 +460,61 @@
                 </div>
             </div>
 
-            <!-- Right Panel - Canvas & Export -->
+            <!-- Right Panel -->
             <div>
                 <div class="panel">
                     <h2>🖥️ Preview</h2>
                     <div class="canvas-container">
                         <canvas id="mainCanvas" width="540" height="960"></canvas>
                         <div class="controls-bar">
-                            <button class="btn btn-play" id="btnPlay" onclick="toggleAnimation()">
-                                ▶ Play
-                            </button>
-                            <button class="btn btn-stop" id="btnReset" onclick="resetAnimation()">
-                                ⟲ Reset
-                            </button>
+                            <button class="btn btn-play" id="btnPlay" onclick="toggleAnimation()">▶ Play</button>
+                            <button class="btn btn-stop" id="btnReset" onclick="resetAnimation()">⟲ Reset</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="panel export-panel" style="margin-top:20px">
                     <h2>📹 Export Video (MP4)</h2>
-                    <div class="export-panel">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>FPS</label>
-                                <select id="fpsSelect">
-                                    <option value="24">24 FPS</option>
-                                    <option value="30" selected>30 FPS</option>
-                                    <option value="60">60 FPS</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Durasi Video (detik)</label>
-                                <input type="range" id="exportDuration" min="1" max="30" value="5">
-                                <div class="range-value" id="exportDurationValue">5 detik</div>
-                            </div>
-                        </div>
+                    <div class="form-row">
                         <div class="form-group">
-                            <label>Resolusi Output</label>
-                            <select id="resolutionSelect">
-                                <option value="540x960">540 × 960 (HD)</option>
-                                <option value="720x1280">720 × 1280 (Full HD)</option>
-                                <option value="1080x1920">1080 × 1920 (2K)</option>
+                            <label>FPS</label>
+                            <select id="fpsSelect">
+                                <option value="24">24 FPS</option>
+                                <option value="30" selected>30 FPS</option>
+                                <option value="60">60 FPS</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Bitrate Video</label>
-                            <select id="bitrateSelect">
-                                <option value="2000000">2 Mbps (Kecil)</option>
-                                <option value="5000000" selected>5 Mbps (Sedang)</option>
-                                <option value="10000000">10 Mbps (Besar)</option>
-                            </select>
+                            <label>Durasi Video (detik)</label>
+                            <input type="range" id="exportDuration" min="1" max="30" value="5">
+                            <div class="range-value" id="exportDurationValue">5 detik</div>
                         </div>
-                        <button class="btn btn-export" id="btnExport" onclick="exportVideo()" style="width:100%; justify-content:center; margin-top:12px">
-                            🎬 Export Video (MP4)
-                        </button>
-                        <div class="progress-bar" id="progressBar">
-                            <div class="progress-fill" id="progressFill"></div>
-                        </div>
-                        <div class="status-text" id="statusText"></div>
-                        <div class="warning-box" id="warningBox">
-                            ⚠️ Browser Anda tidak mendukung WebCodecs API. Silakan gunakan Chrome/Edge versi 94+ untuk export MP4.
-                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Resolusi Output</label>
+                        <select id="resolutionSelect">
+                            <option value="540x960">540 × 960 (HD)</option>
+                            <option value="720x1280">720 × 1280 (Full HD)</option>
+                            <option value="1080x1920">1080 × 1920 (2K)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bitrate Video</label>
+                        <select id="bitrateSelect">
+                            <option value="2000000">2 Mbps (Kecil)</option>
+                            <option value="5000000" selected>5 Mbps (Sedang)</option>
+                            <option value="10000000">10 Mbps (Besar)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-export" id="btnExport" onclick="exportVideo()" style="width:100%; justify-content:center; margin-top:12px">
+                        🎬 Export Video (MP4)
+                    </button>
+                    <div class="progress-bar" id="progressBar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="status-text" id="statusText"></div>
+                    <div class="warning-box" id="warningBox">
+                        ⚠️ Browser Anda tidak mendukung WebCodecs API. Gunakan Chrome/Edge 94+.
                     </div>
                 </div>
             </div>
@@ -505,41 +522,103 @@
     </div>
 
     <script type="module">
-        // Import mp4-muxer menggunakan ES Module
         import { Muxer, ArrayBufferTarget } from 'https://esm.run/mp4-muxer@5.1.1';
-
-        // Expose ke window agar bisa diakses dari script biasa
         window.Muxer = Muxer;
         window.ArrayBufferTarget = ArrayBufferTarget;
     </script>
 
     <script>
-        // State
+        // ============ STATE ============
         let uploadedImage = null;
-        let currentShape = 'circle';
-        let objectSize = 200;
-        let rotationDuration = 4;
+        let activeObject = 'A';
         let isAnimating = false;
         let animationId = null;
-        let currentAngle = 0;
         let startTime = null;
         let isExporting = false;
 
-        // Canvas setup
+        // Default positions
+        const defaultPositions = { A: 'top', B: 'bottom' };
+
+        // Object configs
+        const objects = {
+            A: {
+                shape: 'circle',
+                size: 180,
+                duration: 4,
+                direction: 'clockwise',
+                borderColor: '#e94560',
+                showBorder: true,
+                position: 'top',
+                angle: 0
+            },
+            B: {
+                shape: 'hexagon',
+                size: 180,
+                duration: 6,
+                direction: 'counterclockwise',
+                borderColor: '#f5a623',
+                showBorder: true,
+                position: 'bottom',
+                angle: 0
+            }
+        };
+
+        const showBackground = { value: true };
+
+        // ============ CANVAS ============
         const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Check WebCodecs support
-        function checkWebCodecsSupport() {
-            if (!('VideoEncoder' in window)) {
-                document.getElementById('warningBox').classList.add('show');
-                document.getElementById('btnExport').disabled = true;
-                return false;
-            }
-            return true;
+        // ============ OBJECT SWITCHING ============
+        function switchObject(key) {
+            activeObject = key;
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.obj === key);
+            });
+            document.getElementById('activeLabel').textContent = 'Objek ' + key;
+            loadObjectSettings();
+            updatePositionButtons();
         }
 
-        // Upload handling
+        function loadObjectSettings() {
+            const obj = objects[activeObject];
+            document.getElementById('sizeSlider').value = obj.size;
+            document.getElementById('sizeValue').textContent = obj.size + 'px';
+            document.getElementById('durationSlider').value = obj.duration;
+            document.getElementById('durationValue').textContent = obj.duration + ' detik';
+            document.getElementById('rotationDirection').value = obj.direction;
+            document.getElementById('borderColor').value = obj.borderColor;
+            document.getElementById('showBorder').checked = obj.showBorder;
+
+            // Update shape buttons
+            document.querySelectorAll('#shapeSelector .shape-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.shape === obj.shape);
+            });
+        }
+
+        function saveObjectSettings() {
+            const obj = objects[activeObject];
+            obj.size = parseInt(document.getElementById('sizeSlider').value);
+            obj.duration = parseFloat(document.getElementById('durationSlider').value);
+            obj.direction = document.getElementById('rotationDirection').value;
+            obj.borderColor = document.getElementById('borderColor').value;
+            obj.showBorder = document.getElementById('showBorder').checked;
+        }
+
+        function updatePositionButtons() {
+            const pos = objects[activeObject].position;
+            document.querySelectorAll('.position-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.pos === pos);
+            });
+        }
+
+        function setPosition(pos) {
+            objects[activeObject].position = pos;
+            updatePositionButtons();
+            drawFrame();
+        }
+
+        // ============ UPLOAD ============
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
 
@@ -557,14 +636,10 @@
             e.preventDefault();
             uploadArea.style.borderColor = 'rgba(233, 69, 96, 0.5)';
             uploadArea.style.background = 'transparent';
-            if (e.dataTransfer.files[0]) {
-                handleFile(e.dataTransfer.files[0]);
-            }
+            if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
         });
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) {
-                handleFile(e.target.files[0]);
-            }
+            if (e.target.files[0]) handleFile(e.target.files[0]);
         });
 
         function handleFile(file) {
@@ -573,7 +648,7 @@
                 const img = new Image();
                 img.onload = () => {
                     uploadedImage = img;
-                    uploadArea.innerHTML = `<p style="color:#00b894">✓ ${file.name}</p><p style="font-size:0.75em; color:#666; margin-top:4px">Klik untuk ganti gambar</p>`;
+                    uploadArea.innerHTML = `<p style="color:#00b894">✓ ${file.name}</p><p style="font-size:0.75em; color:#666; margin-top:4px">Klik untuk ganti</p>`;
                     drawFrame();
                 };
                 img.src = e.target.result;
@@ -581,38 +656,53 @@
             reader.readAsDataURL(file);
         }
 
-        // Shape selection
-        document.querySelectorAll('.shape-btn').forEach(btn => {
+        // ============ SHAPE SELECTION ============
+        document.querySelectorAll('#shapeSelector .shape-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('#shapeSelector .shape-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                currentShape = btn.dataset.shape;
+                objects[activeObject].shape = btn.dataset.shape;
                 drawFrame();
             });
         });
 
-        // Sliders
+        // ============ SETTINGS LISTENERS ============
         document.getElementById('sizeSlider').addEventListener('input', (e) => {
-            objectSize = parseInt(e.target.value);
-            document.getElementById('sizeValue').textContent = objectSize + 'px';
+            objects[activeObject].size = parseInt(e.target.value);
+            document.getElementById('sizeValue').textContent = e.target.value + 'px';
             drawFrame();
         });
 
         document.getElementById('durationSlider').addEventListener('input', (e) => {
-            rotationDuration = parseFloat(e.target.value);
-            document.getElementById('durationValue').textContent = rotationDuration + ' detik';
+            objects[activeObject].duration = parseFloat(e.target.value);
+            document.getElementById('durationValue').textContent = e.target.value + ' detik';
+        });
+
+        document.getElementById('rotationDirection').addEventListener('change', (e) => {
+            objects[activeObject].direction = e.target.value;
+            drawFrame();
+        });
+
+        document.getElementById('borderColor').addEventListener('input', (e) => {
+            objects[activeObject].borderColor = e.target.value;
+            drawFrame();
+        });
+
+        document.getElementById('showBorder').addEventListener('change', (e) => {
+            objects[activeObject].showBorder = e.target.checked;
+            drawFrame();
+        });
+
+        document.getElementById('showBackground').addEventListener('change', (e) => {
+            showBackground.value = e.target.checked;
+            drawFrame();
         });
 
         document.getElementById('exportDuration').addEventListener('input', (e) => {
             document.getElementById('exportDurationValue').textContent = e.target.value + ' detik';
         });
 
-        document.getElementById('rotationDirection').addEventListener('change', () => drawFrame());
-        document.getElementById('borderColor').addEventListener('input', () => drawFrame());
-        document.getElementById('showBorder').addEventListener('change', () => drawFrame());
-        document.getElementById('showBackground').addEventListener('change', () => drawFrame());
-
-        // Get shape path
+        // ============ SHAPE PATH ============
         function getShapePath(ctx, cx, cy, size, shape) {
             ctx.beginPath();
             const r = size / 2;
@@ -623,11 +713,10 @@
                     break;
                 case 'triangle':
                     for (let i = 0; i < 3; i++) {
-                        const angle = (i * 2 * Math.PI / 3) - Math.PI / 2;
-                        const x = cx + r * Math.cos(angle);
-                        const y = cy + r * Math.sin(angle);
-                        if (i === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
+                        const a = (i * 2 * Math.PI / 3) - Math.PI / 2;
+                        const x = cx + r * Math.cos(a);
+                        const y = cy + r * Math.sin(a);
+                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                     }
                     ctx.closePath();
                     break;
@@ -635,42 +724,37 @@
                     ctx.rect(cx - r, cy - r, size, size);
                     break;
                 case 'prism':
-                    const points = 6;
-                    for (let i = 0; i < points; i++) {
-                        const angle = (i * 2 * Math.PI / points) - Math.PI / 2;
+                    for (let i = 0; i < 6; i++) {
+                        const a = (i * 2 * Math.PI / 6) - Math.PI / 2;
                         const rx = i % 2 === 0 ? r : r * 0.6;
-                        const x = cx + rx * Math.cos(angle);
-                        const y = cy + rx * Math.sin(angle);
-                        if (i === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
+                        const x = cx + rx * Math.cos(a);
+                        const y = cy + rx * Math.sin(a);
+                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                     }
                     ctx.closePath();
                     break;
                 case 'hexagon':
                     for (let i = 0; i < 6; i++) {
-                        const angle = (i * 2 * Math.PI / 6) - Math.PI / 2;
-                        const x = cx + r * Math.cos(angle);
-                        const y = cy + r * Math.sin(angle);
-                        if (i === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
+                        const a = (i * 2 * Math.PI / 6) - Math.PI / 2;
+                        const x = cx + r * Math.cos(a);
+                        const y = cy + r * Math.sin(a);
+                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                     }
                     ctx.closePath();
                     break;
                 case 'star':
                     for (let i = 0; i < 10; i++) {
-                        const angle = (i * Math.PI / 5) - Math.PI / 2;
+                        const a = (i * Math.PI / 5) - Math.PI / 2;
                         const sr = i % 2 === 0 ? r : r * 0.45;
-                        const x = cx + sr * Math.cos(angle);
-                        const y = cy + sr * Math.sin(angle);
-                        if (i === 0) ctx.moveTo(x, y);
-                        else ctx.lineTo(x, y);
+                        const x = cx + sr * Math.cos(a);
+                        const y = cy + sr * Math.sin(a);
+                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                     }
                     ctx.closePath();
                     break;
             }
         }
 
-        // Draw image to fill canvas (cover mode)
         function drawImageCover(ctx, img, x, y, w, h) {
             const imgRatio = img.width / img.height;
             const canvasRatio = w / h;
@@ -691,16 +775,20 @@
             ctx.drawImage(img, drawX, drawY, drawW, drawH);
         }
 
-        // Draw frame
-        function drawFrame(angle = 0) {
+        // Get Y position based on object position
+        function getObjectY(w, h, position) {
+            if (position === 'top') return h * 0.3;
+            return h * 0.7;
+        }
+
+        // ============ DRAW FRAME ============
+        function drawFrame() {
             const w = canvas.width;
             const h = canvas.height;
-            const cx = w / 2;
-            const cy = h / 2;
 
             ctx.clearRect(0, 0, w, h);
 
-            if (document.getElementById('showBackground').checked) {
+            if (showBackground.value) {
                 ctx.fillStyle = '#1a1a2e';
                 ctx.fillRect(0, 0, w, h);
             }
@@ -711,49 +799,55 @@
                 ctx.fillStyle = '#666';
                 ctx.font = '18px Segoe UI';
                 ctx.textAlign = 'center';
-                ctx.fillText('Upload gambar untuk memulai', cx, cy - 10);
+                ctx.fillText('Upload gambar untuk memulai', w/2, h/2 - 10);
                 ctx.font = '14px Segoe UI';
-                ctx.fillText('Rasio 9:16', cx, cy + 20);
+                ctx.fillText('Rasio 9:16', w/2, h/2 + 20);
                 return;
             }
 
+            // Draw full image as background
             drawImageCover(ctx, uploadedImage, 0, 0, w, h);
 
-            ctx.save();
-            getShapePath(ctx, cx, cy, objectSize, currentShape);
-            ctx.clip();
+            // Draw both objects
+            drawObject(ctx, objects.A, w, h);
+            drawObject(ctx, objects.B, w, h);
+        }
 
-            ctx.translate(cx, cy);
-            ctx.rotate(angle);
-            ctx.translate(-cx, -cy);
+        function drawObject(targetCtx, obj, w, h) {
+            const cx = w / 2;
+            const cy = getObjectY(w, h, obj.position);
 
-            drawImageCover(ctx, uploadedImage, 0, 0, w, h);
-            ctx.restore();
+            targetCtx.save();
+            getShapePath(targetCtx, cx, cy, obj.size, obj.shape);
+            targetCtx.clip();
 
-            if (document.getElementById('showBorder').checked) {
-                ctx.save();
-                ctx.translate(cx, cy);
-                ctx.rotate(angle);
-                ctx.translate(-cx, -cy);
+            targetCtx.translate(cx, cy);
+            targetCtx.rotate(obj.angle);
+            targetCtx.translate(-cx, -cy);
 
-                const borderColor = document.getElementById('borderColor').value;
-                ctx.strokeStyle = borderColor;
-                ctx.lineWidth = 3;
-                ctx.shadowColor = borderColor;
-                ctx.shadowBlur = 15;
-                getShapePath(ctx, cx, cy, objectSize, currentShape);
-                ctx.stroke();
-                ctx.restore();
+            drawImageCover(targetCtx, uploadedImage, 0, 0, w, h);
+            targetCtx.restore();
+
+            if (obj.showBorder) {
+                targetCtx.save();
+                targetCtx.translate(cx, cy);
+                targetCtx.rotate(obj.angle);
+                targetCtx.translate(-cx, -cy);
+
+                targetCtx.strokeStyle = obj.borderColor;
+                targetCtx.lineWidth = 3;
+                targetCtx.shadowColor = obj.borderColor;
+                targetCtx.shadowBlur = 15;
+                getShapePath(targetCtx, cx, cy, obj.size, obj.shape);
+                targetCtx.stroke();
+                targetCtx.restore();
             }
         }
 
-        // Animation
+        // ============ ANIMATION ============
         function toggleAnimation() {
-            if (isAnimating) {
-                stopAnimation();
-            } else {
-                startAnimation();
-            }
+            if (isAnimating) stopAnimation();
+            else startAnimation();
         }
 
         function startAnimation() {
@@ -762,7 +856,7 @@
                 return;
             }
             isAnimating = true;
-            startTime = performance.now() - (currentAngle / (2 * Math.PI)) * rotationDuration * 1000;
+            startTime = performance.now();
             document.getElementById('btnPlay').innerHTML = '⏸ Pause';
             animate();
         }
@@ -778,9 +872,10 @@
 
         function resetAnimation() {
             stopAnimation();
-            currentAngle = 0;
+            objects.A.angle = 0;
+            objects.B.angle = 0;
             startTime = null;
-            drawFrame(0);
+            drawFrame();
         }
 
         function animate() {
@@ -788,33 +883,42 @@
 
             const now = performance.now();
             const elapsed = (now - startTime) / 1000;
-            const direction = document.getElementById('rotationDirection').value === 'clockwise' ? 1 : -1;
-            currentAngle = direction * (elapsed / rotationDuration) * Math.PI * 2;
 
-            drawFrame(currentAngle);
+            // Update angles for both objects
+            ['A', 'B'].forEach(key => {
+                const obj = objects[key];
+                const dir = obj.direction === 'clockwise' ? 1 : -1;
+                obj.angle = dir * (elapsed / obj.duration) * Math.PI * 2;
+            });
+
+            drawFrame();
             animationId = requestAnimationFrame(animate);
         }
 
-        // Export Video dengan WebCodecs + MP4 Muxer
+        // ============ EXPORT ============
+        function checkWebCodecsSupport() {
+            if (!('VideoEncoder' in window)) {
+                document.getElementById('warningBox').classList.add('show');
+                document.getElementById('btnExport').disabled = true;
+                return false;
+            }
+            return true;
+        }
+
         async function exportVideo() {
             if (!uploadedImage) {
                 alert('Upload gambar terlebih dahulu!');
                 return;
             }
+            if (!checkWebCodecsSupport()) return;
 
-            if (!checkWebCodecsSupport()) {
-                return;
-            }
-
-            // Tunggu sampai library loaded
             let waitCount = 0;
             while (!window.Muxer && waitCount < 50) {
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(r => setTimeout(r, 100));
                 waitCount++;
             }
-
             if (!window.Muxer) {
-                alert('Gagal memuat library MP4 Muxer. Silakan refresh halaman.');
+                alert('Gagal memuat library MP4 Muxer.');
                 return;
             }
 
@@ -832,170 +936,149 @@
             progressBar.classList.add('active');
             progressFill.style.width = '0%';
 
-            // Get settings
             const fps = parseInt(document.getElementById('fpsSelect').value);
             const duration = parseInt(document.getElementById('exportDuration').value);
             const resolution = document.getElementById('resolutionSelect').value;
             const bitrate = parseInt(document.getElementById('bitrateSelect').value);
             const [width, height] = resolution.split('x').map(Number);
 
-            // Create offscreen canvas for export
             const exportCanvas = document.createElement('canvas');
             exportCanvas.width = width;
             exportCanvas.height = height;
             const exportCtx = exportCanvas.getContext('2d');
 
-            // Setup MP4 Muxer
             const { Muxer, ArrayBufferTarget } = window;
             const target = new ArrayBufferTarget();
-            
             const muxer = new Muxer({
                 target,
-                video: {
-                    codec: 'avc',
-                    width,
-                    height
-                },
+                video: { codec: 'avc', width, height },
                 fastStart: 'in-memory'
             });
 
-            // Setup VideoEncoder
             const encoder = new VideoEncoder({
-                output: (chunk, meta) => {
-                    muxer.addVideoChunk(chunk, meta);
-                },
+                output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
                 error: (e) => {
                     console.error('Encoder error:', e);
                     statusText.textContent = '❌ Error: ' + e.message;
                 }
             });
 
-            // Configure encoder
             encoder.configure({
-                codec: 'avc1.640028', // H.264 High Profile
-                width,
-                height,
-                bitrate,
+                codec: 'avc1.640028',
+                width, height, bitrate,
                 framerate: fps
             });
 
             const totalFrames = fps * duration;
-            const direction = document.getElementById('rotationDirection').value === 'clockwise' ? 1 : -1;
-            const keyframeInterval = fps * 2; // Keyframe setiap 2 detik
+            const keyframeInterval = fps * 2;
+            const scale = width / canvas.width;
 
             statusText.textContent = '🎬 Memulai encoding...';
 
-            // Render dan encode setiap frame
             for (let frame = 0; frame < totalFrames; frame++) {
-                const angle = direction * (frame / totalFrames) * Math.PI * 2;
+                const time = frame / fps;
 
-                // Render frame ke canvas
-                renderToCanvas(exportCtx, width, height, angle);
+                // Calculate angles for both objects
+                ['A', 'B'].forEach(key => {
+                    const obj = objects[key];
+                    const dir = obj.direction === 'clockwise' ? 1 : -1;
+                    obj.angle = dir * (time / obj.duration) * Math.PI * 2;
+                });
 
-                // Buat VideoFrame dari canvas
+                // Render frame
+                renderToCanvas(exportCtx, width, height, scale);
+
                 const videoFrame = new VideoFrame(exportCanvas, {
-                    timestamp: frame * 1_000_000 / fps // timestamp dalam microseconds
+                    timestamp: frame * 1_000_000 / fps
                 });
 
-                // Encode frame
-                const isKeyframe = frame % keyframeInterval === 0;
                 encoder.encode(videoFrame, {
-                    keyFrame: isKeyframe
+                    keyFrame: frame % keyframeInterval === 0
                 });
-
                 videoFrame.close();
 
-                // Update progress
                 const progress = ((frame + 1) / totalFrames) * 100;
                 progressFill.style.width = progress + '%';
                 statusText.textContent = `Encoding frame ${frame + 1}/${totalFrames} (${Math.round(progress)}%)`;
 
-                // Yield to browser setiap 10 frame
                 if (frame % 10 === 0) {
-                    await new Promise(resolve => setTimeout(resolve, 0));
+                    await new Promise(r => setTimeout(r, 0));
                 }
             }
 
-            // Flush encoder
             statusText.textContent = '🔄 Finalizing video...';
             await encoder.flush();
             encoder.close();
-
-            // Finalize muxer
             muxer.finalize();
 
-            // Get MP4 buffer
-            const mp4Buffer = target.buffer;
-            const mp4Blob = new Blob([mp4Buffer], { type: 'video/mp4' });
-
-            // Download MP4
+            const mp4Blob = new Blob([target.buffer], { type: 'video/mp4' });
             const url = URL.createObjectURL(mp4Blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `shape_rotation_${width}x${height}_${Date.now()}.mp4`;
+            a.download = `shape_rotation_2obj_${width}x${height}_${Date.now()}.mp4`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Reset UI
             btnExport.disabled = false;
             btnExport.innerHTML = '🎬 Export Video (MP4)';
             progressBar.classList.remove('active');
             statusText.textContent = '✅ Video MP4 berhasil diexport!';
             isExporting = false;
 
-            setTimeout(() => {
-                statusText.textContent = '';
-            }, 3000);
+            setTimeout(() => { statusText.textContent = ''; }, 3000);
         }
 
-        function renderToCanvas(targetCtx, w, h, angle) {
-            const cx = w / 2;
-            const cy = h / 2;
-
+        function renderToCanvas(targetCtx, w, h, scale) {
             targetCtx.clearRect(0, 0, w, h);
 
-            if (document.getElementById('showBackground').checked) {
+            if (showBackground.value) {
                 targetCtx.fillStyle = '#1a1a2e';
                 targetCtx.fillRect(0, 0, w, h);
             }
 
-            const scale = w / canvas.width;
-            const scaledSize = objectSize * scale;
-
             drawImageCover(targetCtx, uploadedImage, 0, 0, w, h);
 
-            targetCtx.save();
-            getShapePath(targetCtx, cx, cy, scaledSize, currentShape);
-            targetCtx.clip();
+            // Draw both objects with scaled size
+            ['A', 'B'].forEach(key => {
+                const obj = objects[key];
+                const cx = w / 2;
+                const cy = getObjectY(w, h, obj.position);
+                const scaledSize = obj.size * scale;
 
-            targetCtx.translate(cx, cy);
-            targetCtx.rotate(angle);
-            targetCtx.translate(-cx, -cy);
-
-            drawImageCover(targetCtx, uploadedImage, 0, 0, w, h);
-            targetCtx.restore();
-
-            if (document.getElementById('showBorder').checked) {
                 targetCtx.save();
+                getShapePath(targetCtx, cx, cy, scaledSize, obj.shape);
+                targetCtx.clip();
+
                 targetCtx.translate(cx, cy);
-                targetCtx.rotate(angle);
+                targetCtx.rotate(obj.angle);
                 targetCtx.translate(-cx, -cy);
 
-                const borderColor = document.getElementById('borderColor').value;
-                targetCtx.strokeStyle = borderColor;
-                targetCtx.lineWidth = 3 * scale;
-                targetCtx.shadowColor = borderColor;
-                targetCtx.shadowBlur = 15 * scale;
-                getShapePath(targetCtx, cx, cy, scaledSize, currentShape);
-                targetCtx.stroke();
+                drawImageCover(targetCtx, uploadedImage, 0, 0, w, h);
                 targetCtx.restore();
-            }
+
+                if (obj.showBorder) {
+                    targetCtx.save();
+                    targetCtx.translate(cx, cy);
+                    targetCtx.rotate(obj.angle);
+                    targetCtx.translate(-cx, -cy);
+
+                    targetCtx.strokeStyle = obj.borderColor;
+                    targetCtx.lineWidth = 3 * scale;
+                    targetCtx.shadowColor = obj.borderColor;
+                    targetCtx.shadowBlur = 15 * scale;
+                    getShapePath(targetCtx, cx, cy, scaledSize, obj.shape);
+                    targetCtx.stroke();
+                    targetCtx.restore();
+                }
+            });
         }
 
-        // Initial setup
+        // ============ INIT ============
         checkWebCodecsSupport();
+        loadObjectSettings();
+        updatePositionButtons();
         drawFrame();
     </script>
 </body>
