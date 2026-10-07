@@ -1,0 +1,77 @@
+{
+  "version": 2,
+  "type": "shape-rotator-settings",
+  "exportedAt": "2026-10-08T00:00:00.000Z",
+  "items": [],
+  "settings": {
+    "showBackground": true,
+    "showTimer": true,
+    "objects": {
+      "A": { "shape": "hexagon", "size": 300, "duration": 10, "direction": "clockwise",        "borderColor": "#00b894", "showBorder": true, "position": "top",    "angle": 0 },
+      "B": { "shape": "hexagon", "size": 300, "duration": 10, "direction": "counterclockwise", "borderColor": "#00cec9", "showBorder": true, "position": "bottom", "angle": 0 }
+    },
+    "export": { "fps": 30, "duration": 60, "width": 720, "height": 1280, "bitrate": 5000000 }
+  },
+  "presets": [
+    {
+      "name": "1-novice",
+      "settings": {
+        "showBackground": true,
+        "showTimer": true,
+        "objects": {
+          "A": { "shape": "hexagon", "size": 300, "duration": 10, "direction": "clockwise",        "borderColor": "#00b894", "showBorder": true, "position": "top",    "angle": 0 },
+          "B": { "shape": "hexagon", "size": 300, "duration": 10, "direction": "counterclockwise", "borderColor": "#00cec9", "showBorder": true, "position": "bottom", "angle": 0 }
+        },
+        "export": { "fps": 30, "duration": 60, "width": 720, "height": 1280, "bitrate": 5000000 }
+      }
+    },
+    {
+      "name": "2-easy",
+      "settings": {
+        "showBackground": true,
+        "showTimer": true,
+        "objects": {
+          "A": { "shape": "hexagon",  "size": 300, "duration": 6, "direction": "clockwise",        "borderColor": "#00cec9", "showBorder": true, "position": "top",    "angle": 0 },
+          "B": { "shape": "triangle", "size": 300, "duration": 6, "direction": "counterclockwise", "borderColor": "#74b9ff", "showBorder": true, "position": "bottom", "angle": 0 }
+        },
+        "export": { "fps": 30, "duration": 60, "width": 720, "height": 1280, "bitrate": 5000000 }
+      }
+    },
+    {
+      "name": "3-medium",
+      "settings": {
+        "showBackground": true,
+        "showTimer": true,
+        "objects": {
+          "A": { "shape": "triangle", "size": 280, "duration": 4, "direction": "clockwise",        "borderColor": "#f5a623", "showBorder": true, "position": "top",    "angle": 0 },
+          "B": { "shape": "hexagon",  "size": 280, "duration": 6, "direction": "counterclockwise", "borderColor": "#fdcb6e", "showBorder": true, "position": "bottom", "angle": 0 }
+        },
+        "export": { "fps": 30, "duration": 60, "width": 720, "height": 1280, "bitrate": 5000000 }
+      }
+    },
+    {
+      "name": "4-hard",
+      "settings": {
+        "showBackground": true,
+        "showTimer": true,
+        "objects": {
+          "A": { "shape": "star",  "size": 260, "duration": 3, "direction": "clockwise",        "borderColor": "#f7971e", "showBorder": true, "position": "top",    "angle": 0 },
+          "B": { "shape": "prism", "size": 260, "duration": 5, "direction": "counterclockwise", "borderColor": "#ff7675", "showBorder": true, "position": "bottom", "angle": 0 }
+        },
+        "export": { "fps": 30, "duration": 60, "width": 720, "height": 1280, "bitrate": 5000000 }
+      }
+    },
+    {
+      "name": "5-impossible",
+      "settings": {
+        "showBackground": true,
+        "showTimer": true,
+        "objects": {
+          "A": { "shape": "star", "size": 240, "duration": 2, "direction": "clockwise",        "borderColor": "#e94560", "showBorder": true, "position": "top",    "angle": 0 },
+          "B": { "shape": "star", "size": 240, "duration": 3, "direction": "counterclockwise", "borderColor": "#ff0000", "showBorder": true, "position": "bottom", "angle": 0 }
+        },
+        "export": { "fps": 30, "duration": 60, "width": 720, "height": 1280, "bitrate": 5000000 }
+      }
+    }
+  ]
+}

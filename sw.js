@@ -1,13 +1,14 @@
 /**
- * Service Worker — Shape Image Rotator
+ * Service Worker — Shape Rotator
  * Strategi:
- *   - Navigasi (mode === 'navigate') → network-first, fallback ke cache / index.html
- *   - Aset statis lain (same-origin GET) → stale-while-revalidate
+ *   - Navigasi (mode === 'navigate')   → network-first, fallback ke cache / index.html
+ *   - Aset statis (same-origin GET)    → stale-while-revalidate
+ *   - CDN pihak ketiga (esm.run dll)   → network-only (tidak di-cache)
  */
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `shape-rotator-static-${CACHE_VERSION}`;
-const PRECACHE_URLS = ['./', './index.html', './manifest.json'];
+const PRECACHE_URLS = ['./', './index.html', './app.js', './style.css', './manifest.json'];
 
 // ---------------------------------------------------------------
 // Install: precache aset inti (toleran jika satu URL gagal)
@@ -53,18 +54,21 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Hanya tangani GET (cache.put() akan error untuk POST/PUT, dsb.)
+  // Hanya tangani GET
   if (request.method !== 'GET') return;
 
-  // Hanya same-origin; library CDN (esm.run) langsung ke jaringan
   const url = new URL(request.url);
+
+  // Cross-origin (CDN library esm.run, dsb.) → langsung jaringan, jangan di-cache
   if (url.origin !== self.location.origin) return;
 
+  // Navigasi → network-first
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request, './index.html'));
     return;
   }
 
+  // Aset statis same-origin → stale-while-revalidate
   event.respondWith(staleWhileRevalidate(request));
 });
 
@@ -106,3 +110,10 @@ async function staleWhileRevalidate(request) {
 
   return cached || networkPromise;
 }
+
+// ---------------------------------------------------------------
+// Message: izinkan UI memicu skipWaiting (untuk auto-update)
+// ---------------------------------------------------------------
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
