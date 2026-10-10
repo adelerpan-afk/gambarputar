@@ -7,7 +7,6 @@
   const BASE_WIDTH = 540;
   const BASE_HEIGHT = 960;
   const BACKGROUND_COLOR = '#1a1a2e';
-  const MP4_MUXER_URL = 'https://esm.run/mp4-muxer@5.1.1';
 
   const ENCODER_QUEUE_HIGH = 8;
   const ENCODER_QUEUE_LOW = 4;
@@ -331,13 +330,11 @@
     targetCtx.textAlign = 'center';
     targetCtx.textBaseline = 'top';
 
-    // Glow merah — lebih besar saat urgent
     targetCtx.shadowColor = red;
     targetCtx.shadowBlur = isUrgent ? fontSize * 0.55 : fontSize * 0.35;
     targetCtx.fillStyle = red;
     targetCtx.fillText(String(seconds), w / 2, pad);
 
-    // Outline gelap untuk kontras di background terang
     targetCtx.shadowBlur = 0;
     targetCtx.lineWidth = Math.max(2, w * 0.004);
     targetCtx.strokeStyle = '#5a0000';
@@ -540,6 +537,7 @@
     remove.className = 'remove';
     remove.title = 'Hapus item';
     remove.textContent = '×';
+    remove.disabled = state.isExporting;
     remove.addEventListener('click', (e) => {
       e.stopPropagation();
       removeItem(item.id);
@@ -640,6 +638,7 @@
     remove.className = 'remove';
     remove.title = 'Hapus preset';
     remove.textContent = '×';
+    remove.disabled = state.isExporting;
     remove.addEventListener('click', (e) => {
       e.stopPropagation();
       removePreset(preset.id);
@@ -918,6 +917,7 @@
 
     dom.showSound.addEventListener('change', (e) => {
       mutateSettings((s) => { s.showSound = e.target.checked; });
+      updateExportAvailability();
     });
 
     dom.showBackground.addEventListener('change', (e) => {
@@ -947,7 +947,6 @@
       version: JSON_VERSION,
       type: JSON_TYPE,
       exportedAt: new Date().toISOString(),
-      items: [],
       settings: deepClone(state.settings),
       presets: state.presets.map((p) => ({
         name: p.name,
@@ -1126,13 +1125,10 @@
       let step, baseFreq, volume, buzDur;
 
       if (secondsLeft > 10) {
-        // 45–50s: warning lambat (1 pip per 2 detik)
         step = 2.0; baseFreq = 330; volume = 0.14; buzDur = 0.22;
       } else if (secondsLeft > 5) {
-        // 50–55s: warning reguler (1 pip per detik)
         step = 1.0; baseFreq = 440; volume = 0.18; buzDur = 0.18;
       } else {
-        // 55–60s: alarm cepat (2 pip per detik)
         step = 0.5; baseFreq = 660; volume = 0.22; buzDur = 0.12;
       }
 
@@ -1184,10 +1180,15 @@
   // ============================================================
   // 17. EXPORT MP4 ENGINE
   // ============================================================
-  let muxerModulePromise = null;
+  // Muxer dimuat via <script> lokal (UMD → window.Mp4Muxer).
+  // Tidak lagi butuh esm.run / jaringan.
   function loadMuxerModule() {
-    if (!muxerModulePromise) muxerModulePromise = import(MP4_MUXER_URL);
-    return muxerModulePromise;
+    if (!window.Mp4Muxer || !window.Mp4Muxer.Muxer) {
+      return Promise.reject(
+        new Error('mp4-muxer belum termuat. Pastikan mp4-muxer.min.js ada di root.')
+      );
+    }
+    return Promise.resolve(window.Mp4Muxer);
   }
 
   const supportsWebCodecs = () => 'VideoEncoder' in window;
@@ -1222,16 +1223,39 @@
 
     dom.btnExportCurrent.disabled = !canExport || !getActiveItem();
     dom.btnExportAll.disabled = !canExport || jobs === 0;
-    dom.warningBox.classList.toggle('show', !supported);
+
+    // Info: cek dukungan WebCodecs dan AudioEncoder
+    const hasAudio = 'AudioEncoder' in window;
+    const wantsSound = state.settings.showSound !== false;
+
+    if (!supported) {
+      dom.warningBox.classList.add('show');
+      dom.warningBox.textContent =
+        '⚠️ Browser Anda tidak mendukung WebCodecs API. Gunakan Chrome/Edge 94+.';
+    } else if (!hasAudio && wantsSound) {
+      dom.warningBox.classList.add('show');
+      dom.warningBox.textContent =
+        'ℹ️ AudioEncoder tidak tersedia — video akan diexport tanpa suara.';
+    } else {
+      dom.warningBox.classList.remove('show');
+    }
   }
 
   async function pickEncoderConfig(width, height, bitrate, framerate) {
-    for (const codec of CODEC_CANDIDATES) {
-      const config = { codec, width, height, bitrate, framerate };
-      try {
-        const { supported } = await VideoEncoder.isConfigSupported(config);
-        if (supported) return config;
-      } catch { /* coba berikutnya */ }
+    // Prioritaskan hardware encoder, fallback ke software
+    const attempts = [
+      { hardwareAcceleration: 'prefer-hardware' },
+      { hardwareAcceleration: 'no-preference' },
+      {},
+    ];
+    for (const extra of attempts) {
+      for (const codec of CODEC_CANDIDATES) {
+        const config = { codec, width, height, bitrate, framerate, ...extra };
+        try {
+          const { supported } = await VideoEncoder.isConfigSupported(config);
+          if (supported) return config;
+        } catch { /* coba berikutnya */ }
+      }
     }
     return null;
   }
@@ -1263,6 +1287,13 @@
       setProgress(0);
       setBatchProgress(0);
     }
+    // Cegah user menghapus item saat encoding berjalan
+    dom.queueList.querySelectorAll('.remove').forEach((b) => {
+      b.disabled = isExporting;
+    });
+    dom.presetList.querySelectorAll('.remove').forEach((b) => {
+      b.disabled = isExporting;
+    });
     updateExportAvailability();
   }
 
@@ -1391,13 +1422,15 @@
 
   /**
    * Format nama file output:
-   *   Dengan preset : {presetName}-{imageName}-{WxH}.mp4
-   *   Tanpa preset  : {imageName}-{WxH}.mp4
+   *   Dengan preset : {preset}-{idx}-{image}-{WxH}.mp4
+   *   Tanpa preset  : {idx}-{image}-{WxH}.mp4
+   * idx 3-digit memastikan dua file bernama sama tidak menimpa.
    */
-  function buildJobFilename(itemName, presetName, width, height) {
+  function buildJobFilename(itemName, presetName, width, height, idx) {
     const imgName = sanitizeFilename(itemName);
     const presetTag = presetName ? `${sanitizeFilename(presetName)}-` : '';
-    return `${presetTag}${imgName}-${width}x${height}.mp4`;
+    const n = typeof idx === 'number' ? `${String(idx).padStart(3, '0')}-` : '';
+    return `${presetTag}${n}${imgName}-${width}x${height}.mp4`;
   }
 
   // ------------------------------------------------------------
@@ -1436,7 +1469,7 @@
         setProgress(ratio);
         setStatus(`Encoding "${item.name}" — ${Math.round(ratio * 100)}%`);
       });
-      downloadBlob(blob, buildJobFilename(item.name, null, opts.width, opts.height));
+      downloadBlob(blob, buildJobFilename(item.name, null, opts.width, opts.height, 0));
 
       item.status = EXPORT_STATUS.DONE;
       item.progress = 1;
@@ -1497,6 +1530,7 @@
 
     const totalPerItem = new Map();
     const donePerItem = new Map();
+    const failedItems = new Set();
     for (const job of jobs) {
       totalPerItem.set(job.item.id, (totalPerItem.get(job.item.id) || 0) + 1);
       if (!donePerItem.has(job.item.id)) donePerItem.set(job.item.id, 0);
@@ -1504,6 +1538,7 @@
 
     let completed = 0;
     let failed = 0;
+    const batchStart = performance.now();
 
     for (let i = 0; i < jobs.length; i++) {
       const { item, settings, presetName } = jobs[i];
@@ -1516,6 +1551,7 @@
         catch {
           item.status = EXPORT_STATUS.ERROR;
           item.errorMessage = 'Gambar gagal dimuat';
+          failedItems.add(item.id);
           refreshItemElement(item);
           failed++;
           donePerItem.set(item.id, donePerItem.get(item.id) + 1);
@@ -1552,17 +1588,28 @@
           setProgress(ratio);
         });
 
-        downloadBlob(blob, buildJobFilename(item.name, presetName, opts.width, opts.height));
+        // index = i agar nama file unik antar job
+        downloadBlob(
+          blob,
+          buildJobFilename(item.name, presetName, opts.width, opts.height, i)
+        );
 
         completed++;
         const doneNow = donePerItem.get(item.id) + 1;
         donePerItem.set(item.id, doneNow);
         item.progress = doneNow / totalPerItem.get(item.id);
-        if (doneNow >= totalPerItem.get(item.id)) item.status = EXPORT_STATUS.DONE;
+
+        // Status akhir: ERROR jika ada sub-job gagal
+        if (doneNow >= totalPerItem.get(item.id)) {
+          item.status = failedItems.has(item.id)
+            ? EXPORT_STATUS.ERROR
+            : EXPORT_STATUS.DONE;
+        }
         refreshItemElement(item);
       } catch (err) {
         console.error(err);
         failed++;
+        failedItems.add(item.id);
         item.status = EXPORT_STATUS.ERROR;
         item.errorMessage = err.message || 'Export gagal';
         donePerItem.set(item.id, donePerItem.get(item.id) + 1);
@@ -1570,7 +1617,17 @@
       }
 
       setBatchProgress((i + 1) / total);
-      setStatus(`✅ ${completed} selesai, ${failed} gagal, ${total - i - 1} tersisa.`);
+
+      // Status + ETA
+      const elapsed = (performance.now() - batchStart) / 1000;
+      const etaSec = completed > 0
+        ? Math.round((elapsed / completed) * (total - completed - failed))
+        : null;
+      const etaText = etaSec != null && etaSec > 0 ? ` · ETA ${etaSec}s` : '';
+      setStatus(
+        `✅ ${completed} selesai, ${failed} gagal, ` +
+        `${total - i - 1} tersisa${etaText}.`
+      );
 
       if (i < jobs.length - 1) await sleep(DOWNLOAD_BATCH_GAP_MS);
     }
@@ -1594,7 +1651,27 @@
   }
 
   // ============================================================
-  // 19. INIT
+  // 19. PWA SHORTCUT
+  // ============================================================
+  function handleShortcut() {
+    const action = new URLSearchParams(location.search).get('action');
+    if (!action) return;
+
+    // Bersihkan URL agar refresh tidak mengulang aksi
+    history.replaceState(null, '', location.pathname);
+
+    if (action === 'import-json') {
+      setTimeout(() => dom.jsonInput.click(), 150);
+    } else if (action === 'export-all') {
+      setTimeout(() => {
+        dom.btnExportAll.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        dom.btnExportAll.focus({ preventScroll: true });
+      }, 150);
+    }
+  }
+
+  // ============================================================
+  // 20. INIT
   // ============================================================
   function init() {
     bindUI();
@@ -1604,6 +1681,7 @@
     drawFrame();
     updateExportAvailability();
     registerServiceWorker();
+    handleShortcut();
   }
 
   init();
