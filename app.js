@@ -7,6 +7,15 @@
   const BASE_WIDTH = 540;
   const BASE_HEIGHT = 960;
   const BACKGROUND_COLOR = '#1a1a2e';
+  const PNG_BACKGROUND_COLOR = '#ffffff'; // latar untuk format transparan
+
+  // Format yang mungkin punya transparansi → butuh latar putih
+  const TRANSPARENT_MIME_TYPES = [
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml',
+  ];
 
   const ENCODER_QUEUE_HIGH = 8;
   const ENCODER_QUEUE_LOW = 4;
@@ -14,14 +23,14 @@
   const DOWNLOAD_REVOKE_DELAY_MS = 5000;
   const DOWNLOAD_BATCH_GAP_MS = 400;
 
-  const FORCED_VIDEO_DURATION = 60;   // semua video dipaksa 60s
-  const FORCED_FPS = 30;              // semua video dipaksa 30fps
+  const FORCED_VIDEO_DURATION = 60;
+  const FORCED_FPS = 30;
 
   const AUDIO_SAMPLE_RATE = 48000;
   const AUDIO_CHANNELS = 1;
   const AUDIO_BITRATE = 128000;
-  const URGENT_THRESHOLD_SEC = 5;     // 5 detik terakhir = tick tajam
-  const BUZZER_WINDOW_SEC = 15;       // buzzer aktif 15 detik terakhir
+  const URGENT_THRESHOLD_SEC = 5;
+  const BUZZER_WINDOW_SEC = 15;
 
   const OBJECT_KEYS = ['A', 'B'];
   const DIRECTIONS = { clockwise: 1, counterclockwise: -1 };
@@ -58,6 +67,45 @@
       .replace(/\.[^.]+$/, '')
       .replace(/[^a-zA-Z0-9._-]/g, '_')
       .slice(0, 60) || 'video';
+  }
+
+  /**
+   * Deteksi apakah sumber gambar mungkin punya transparansi
+   * (PNG, GIF, WebP, SVG). Untuk file, cek MIME dan ekstensi.
+   * Untuk dataURL, cek prefix mime.
+   */
+  function sourceMayHaveTransparency(source) {
+    if (!source) return false;
+
+    if (source.type === 'file' && source.file) {
+      const f = source.file;
+      const mime = (f.type || '').toLowerCase();
+      if (mime && TRANSPARENT_MIME_TYPES.includes(mime)) return true;
+
+      // fallback: cek ekstensi kalau MIME kosong
+      if (typeof f.name === 'string') {
+        const ext = f.name.toLowerCase().split('.').pop();
+        if (ext === 'png' || ext === 'gif' || ext === 'webp' || ext === 'svg') {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (source.type === 'dataURL' && typeof source.data === 'string') {
+      const m = /^data:([^;,]+)/i.exec(source.data);
+      const mime = m ? m[1].toLowerCase() : '';
+      return TRANSPARENT_MIME_TYPES.includes(mime);
+    }
+
+    return false;
+  }
+
+  /** Warna latar yang tepat untuk sebuah item. */
+  function getBackgroundColorFor(item) {
+    return item && item.mayHaveTransparency
+      ? PNG_BACKGROUND_COLOR
+      : BACKGROUND_COLOR;
   }
 
   // ============================================================
@@ -170,6 +218,8 @@
       id: uid(),
       name,
       source,
+      // true → latar putih (PNG/GIF/WebP/SVG)
+      mayHaveTransparency: sourceMayHaveTransparency(source),
       image: null,
       dataURL: null,
       status: EXPORT_STATUS.PENDING,
@@ -182,6 +232,16 @@
     if (item.image) return item.image;
     const dataUrl = await resolveDataURL(item.source);
     if (!item.dataURL) item.dataURL = dataUrl;
+
+    // Setelah dapat dataURL, kadang MIME lebih akurat → refresh flag
+    if (!item.mayHaveTransparency && typeof dataUrl === 'string') {
+      const m = /^data:([^;,]+)/i.exec(dataUrl);
+      const mime = m ? m[1].toLowerCase() : '';
+      if (TRANSPARENT_MIME_TYPES.includes(mime)) {
+        item.mayHaveTransparency = true;
+      }
+    }
+
     const img = await loadImageFromDataURL(dataUrl);
     item.image = img;
     return img;
@@ -314,9 +374,6 @@
     targetCtx.restore();
   }
 
-  /**
-   * Countdown timer — selalu merah, glow makin besar di 5 detik terakhir.
-   */
   function drawTimer(targetCtx, remaining, w, h) {
     const seconds = Math.max(0, Math.ceil(remaining));
     const isUrgent = seconds <= 5;
@@ -382,8 +439,10 @@
     }
 
     const s = state.settings;
+    // PNG/GIF/WebP/SVG → latar putih agar transparansi tidak jadi gelap
+    const bg = getBackgroundColorFor(item);
     if (s.showBackground) {
-      ctx.fillStyle = BACKGROUND_COLOR;
+      ctx.fillStyle = bg;
       ctx.fillRect(0, 0, w, h);
     }
 
@@ -398,12 +457,12 @@
     }
   }
 
-  function renderToCanvas(targetCtx, image, settings, w, h, timeSec) {
+  function renderToCanvas(targetCtx, image, settings, w, h, timeSec, bgColor = BACKGROUND_COLOR) {
     const scale = w / BASE_WIDTH;
 
     targetCtx.clearRect(0, 0, w, h);
     if (settings.showBackground) {
-      targetCtx.fillStyle = BACKGROUND_COLOR;
+      targetCtx.fillStyle = bgColor;
       targetCtx.fillRect(0, 0, w, h);
     }
     drawImageCover(targetCtx, image, 0, 0, w, h);
@@ -505,10 +564,12 @@
     const thumb = document.createElement('img');
     thumb.className = 'thumb';
     thumb.alt = '';
+    // Thumbnail: pakai latar putih kalau PNG agar terlihat
+    if (item.mayHaveTransparency) thumb.style.background = '#ffffff';
     if (item.dataURL || item.source.type === 'dataURL') {
       thumb.src = item.dataURL || item.source.data;
     } else {
-      thumb.style.background = 'var(--c-panel-soft)';
+      if (!item.mayHaveTransparency) thumb.style.background = 'var(--c-panel-soft)';
     }
     el.appendChild(thumb);
 
@@ -717,9 +778,19 @@
       try {
         const dataUrl = await resolveDataURL(item.source);
         item.dataURL = dataUrl;
+        // Refresh deteksi transparansi dari dataURL
+        const m = /^data:([^;,]+)/i.exec(dataUrl);
+        const mime = m ? m[1].toLowerCase() : '';
+        if (TRANSPARENT_MIME_TYPES.includes(mime)) {
+          item.mayHaveTransparency = true;
+        }
         item.image = await loadImageFromDataURL(dataUrl);
+
         const thumbEl = dom.queueList.querySelector(`[data-id="${item.id}"] .thumb`);
-        if (thumbEl) thumbEl.src = dataUrl;
+        if (thumbEl) {
+          thumbEl.src = dataUrl;
+          if (item.mayHaveTransparency) thumbEl.style.background = '#ffffff';
+        }
         if (item.id === state.activeId) drawFrame();
       } catch (err) {
         console.warn('Gagal preload:', item.name, err);
@@ -1077,7 +1148,6 @@
     }
     if (override.export && typeof override.export === 'object') {
       Object.assign(result.export, override.export);
-      // Paksa durasi & fps, apa pun yang ada di JSON
       result.export.duration = FORCED_VIDEO_DURATION;
       result.export.fps = FORCED_FPS;
     }
@@ -1095,7 +1165,6 @@
     master.gain.value = 1.0;
     master.connect(offline.destination);
 
-    // ============ TICK (setiap detik) ============
     for (let s = 0; s < durationSec; s++) {
       const isUrgent = s >= durationSec - urgentFromSec;
 
@@ -1105,7 +1174,6 @@
         decay: isUrgent ? 0.09 : 0.045,
       });
 
-      // Double-beep pada 5 detik terakhir
       if (isUrgent) {
         scheduleTick(offline, master, s + 0.35, {
           freq: 1700,
@@ -1115,7 +1183,6 @@
       }
     }
 
-    // ============ BUZZER (15 detik terakhir, tempo naik mendekati akhir) ============
     const buzzerZoneStart = durationSec - BUZZER_WINDOW_SEC;
     let t = buzzerZoneStart;
 
@@ -1180,8 +1247,6 @@
   // ============================================================
   // 17. EXPORT MP4 ENGINE
   // ============================================================
-  // Muxer dimuat via <script> lokal (UMD → window.Mp4Muxer).
-  // Tidak lagi butuh esm.run / jaringan.
   function loadMuxerModule() {
     if (!window.Mp4Muxer || !window.Mp4Muxer.Muxer) {
       return Promise.reject(
@@ -1224,7 +1289,6 @@
     dom.btnExportCurrent.disabled = !canExport || !getActiveItem();
     dom.btnExportAll.disabled = !canExport || jobs === 0;
 
-    // Info: cek dukungan WebCodecs dan AudioEncoder
     const hasAudio = 'AudioEncoder' in window;
     const wantsSound = state.settings.showSound !== false;
 
@@ -1242,7 +1306,6 @@
   }
 
   async function pickEncoderConfig(width, height, bitrate, framerate) {
-    // Prioritaskan hardware encoder, fallback ke software
     const attempts = [
       { hardwareAcceleration: 'prefer-hardware' },
       { hardwareAcceleration: 'no-preference' },
@@ -1287,7 +1350,6 @@
       setProgress(0);
       setBatchProgress(0);
     }
-    // Cegah user menghapus item saat encoding berjalan
     dom.queueList.querySelectorAll('.remove').forEach((b) => {
       b.disabled = isExporting;
     });
@@ -1298,7 +1360,10 @@
   }
 
   async function renderImageToMp4(image, settings, opts, onProgress) {
-    const { fps, duration, width, height, bitrate, includeAudio } = opts;
+    const {
+      fps, duration, width, height, bitrate, includeAudio,
+      bgColor = BACKGROUND_COLOR, // latar kanvas
+    } = opts;
 
     const { Muxer, ArrayBufferTarget } = await loadMuxerModule();
 
@@ -1315,7 +1380,6 @@
       fastStart: 'in-memory',
     });
 
-    // ---- Video encoder ----
     let videoError = null;
     const videoEncoder = new VideoEncoder({
       output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
@@ -1331,7 +1395,6 @@
     const totalFrames = fps * duration;
     const keyframeInterval = fps * 2;
 
-    // ---- Audio encoder (opsional) ----
     let audioEncoder = null;
     if (includeAudio && 'AudioEncoder' in window) {
       audioEncoder = new AudioEncoder({
@@ -1365,7 +1428,8 @@
       for (let frame = 0; frame < totalFrames; frame++) {
         if (videoError) throw videoError;
 
-        renderToCanvas(exportCtx, image, settings, width, height, frame / fps);
+        // Teruskan bgColor agar PNG/GIF dapat latar putih
+        renderToCanvas(exportCtx, image, settings, width, height, frame / fps, bgColor);
 
         const videoFrame = new VideoFrame(exportCanvas, {
           timestamp: Math.round((frame * 1_000_000) / fps),
@@ -1420,12 +1484,6 @@
     return new Blob([target.buffer], { type: 'video/mp4' });
   }
 
-  /**
-   * Format nama file output:
-   *   Dengan preset : {preset}-{idx}-{image}-{WxH}.mp4
-   *   Tanpa preset  : {idx}-{image}-{WxH}.mp4
-   * idx 3-digit memastikan dua file bernama sama tidak menimpa.
-   */
   function buildJobFilename(itemName, presetName, width, height, idx) {
     const imgName = sanitizeFilename(itemName);
     const presetTag = presetName ? `${sanitizeFilename(presetName)}-` : '';
@@ -1455,6 +1513,8 @@
     const opts = {
       ...settings.export,
       includeAudio: settings.showSound !== false,
+      // PNG/GIF/WebP/SVG → latar putih
+      bgColor: getBackgroundColorFor(item),
     };
 
     try {
@@ -1563,7 +1623,6 @@
       item.status = EXPORT_STATUS.EXPORTING;
       refreshItemElement(item);
 
-      // Paksa fps & durasi
       settings.export = {
         ...(settings.export || {}),
         fps: FORCED_FPS,
@@ -1577,6 +1636,8 @@
         height: settings.export.height ?? 960,
         bitrate: settings.export.bitrate ?? 5000000,
         includeAudio: settings.showSound !== false,
+        // PNG/GIF/WebP/SVG → latar putih
+        bgColor: getBackgroundColorFor(item),
       };
 
       try {
@@ -1588,7 +1649,6 @@
           setProgress(ratio);
         });
 
-        // index = i agar nama file unik antar job
         downloadBlob(
           blob,
           buildJobFilename(item.name, presetName, opts.width, opts.height, i)
@@ -1599,7 +1659,6 @@
         donePerItem.set(item.id, doneNow);
         item.progress = doneNow / totalPerItem.get(item.id);
 
-        // Status akhir: ERROR jika ada sub-job gagal
         if (doneNow >= totalPerItem.get(item.id)) {
           item.status = failedItems.has(item.id)
             ? EXPORT_STATUS.ERROR
@@ -1618,7 +1677,6 @@
 
       setBatchProgress((i + 1) / total);
 
-      // Status + ETA
       const elapsed = (performance.now() - batchStart) / 1000;
       const etaSec = completed > 0
         ? Math.round((elapsed / completed) * (total - completed - failed))
@@ -1657,7 +1715,6 @@
     const action = new URLSearchParams(location.search).get('action');
     if (!action) return;
 
-    // Bersihkan URL agar refresh tidak mengulang aksi
     history.replaceState(null, '', location.pathname);
 
     if (action === 'import-json') {
