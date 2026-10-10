@@ -6,7 +6,7 @@
  *   - CDN pihak ketiga (esm.run dll)   → network-only (tidak di-cache)
  */
 
-const CACHE_VERSION = 'v5'; // [FIX] bump versi
+const CACHE_VERSION = 'v5';
 const STATIC_CACHE = `shape-rotator-static-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   './',
@@ -14,11 +14,11 @@ const PRECACHE_URLS = [
   './app.js',
   './style.css',
   './manifest.json',
-  './mp4-muxer.min.js', // [FIX] muxer lokal ikut di-precache
+  './mp4-muxer.min.js',
 ];
 
 // ---------------------------------------------------------------
-// Install
+// Install: precache aset inti (toleran jika satu URL gagal)
 // ---------------------------------------------------------------
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -38,7 +38,7 @@ self.addEventListener('install', (event) => {
 });
 
 // ---------------------------------------------------------------
-// Activate
+// Activate: hapus cache versi lama
 // ---------------------------------------------------------------
 self.addEventListener('activate', (event) => {
   event.waitUntil(
@@ -56,28 +56,31 @@ self.addEventListener('activate', (event) => {
 });
 
 // ---------------------------------------------------------------
-// Fetch
+// Fetch: routing strategi
 // ---------------------------------------------------------------
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
+  // Hanya tangani GET
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
 
-  // Cross-origin → langsung jaringan
+  // Cross-origin (CDN library, dsb.) → langsung jaringan, jangan di-cache
   if (url.origin !== self.location.origin) return;
 
+  // Navigasi → network-first
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request, './index.html'));
     return;
   }
 
+  // Aset statis same-origin → stale-while-revalidate
   event.respondWith(staleWhileRevalidate(request));
 });
 
 // ---------------------------------------------------------------
-// network-first
+// Strategi: network-first (untuk navigasi / HTML)
 // ---------------------------------------------------------------
 async function networkFirst(request, fallbackUrl) {
   try {
@@ -88,7 +91,7 @@ async function networkFirst(request, fallbackUrl) {
     }
     return response;
   } catch {
-    // [FIX] coba request persis dulu, lalu fallbackUrl, lalu index.html
+    // Fallback berlapis: request persis → fallbackUrl → index.html
     const cached =
       (await caches.match(request)) ||
       (await caches.match(fallbackUrl)) ||
@@ -101,7 +104,7 @@ async function networkFirst(request, fallbackUrl) {
 }
 
 // ---------------------------------------------------------------
-// stale-while-revalidate
+// Strategi: stale-while-revalidate (untuk aset statis)
 // ---------------------------------------------------------------
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(STATIC_CACHE);
@@ -112,9 +115,9 @@ async function staleWhileRevalidate(request) {
       if (response && response.ok) cache.put(request, response.clone());
       return response;
     })
-    .catch(() => null); // [FIX] null, bukan cached (yang mungkin undefined)
+    .catch(() => null);
 
-  // [FIX] jamin selalu ada Response valid
+  // Jamin selalu ada Response valid
   const result = cached || (await networkPromise);
   return (
     result ||
@@ -123,7 +126,7 @@ async function staleWhileRevalidate(request) {
 }
 
 // ---------------------------------------------------------------
-// Message
+// Message: izinkan UI memicu skipWaiting (untuk auto-update)
 // ---------------------------------------------------------------
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
