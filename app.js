@@ -176,7 +176,7 @@
       showBackground: true,
       showTimer: true,
       showSound: true,
-      overlayText: '',   // teks overlay opsional
+      overlayText: '',
       objects: {
         A: defaultObject({ shape: 'circle', position: 'top', borderColor: '#e94560', duration: 4 }),
         B: defaultObject({ shape: 'hexagon', position: 'bottom', borderColor: '#f5a623', duration: 6, direction: 'counterclockwise' }),
@@ -436,52 +436,55 @@
   }
 
   /**
-   * Overlay text di bagian bawah canvas — latar putih, border hitam, teks hitam.
+   * Overlay text VERTIKAL di sisi KIRI-TENGAH canvas.
+   * Rotasi -90° (membaca bawah → atas), latar putih, border hitam, teks hitam.
    */
   function drawOverlayText(targetCtx, text, w, h) {
     if (!text || !text.trim()) return;
     let displayText = text.trim();
 
-    const fontSize = Math.round(w * 0.075);
+    const fontSize = Math.round(w * 0.065);
 
     targetCtx.save();
     targetCtx.font = `bold ${fontSize}px "Segoe UI", "Helvetica Neue", sans-serif`;
     targetCtx.textAlign = 'center';
     targetCtx.textBaseline = 'middle';
 
-    // Truncate kalau kepanjangan
-    const maxTextW = w * 0.85;
-    if (targetCtx.measureText(displayText).width > maxTextW) {
+    // Karena teks berjalan vertikal, batas panjang teks = tinggi canvas
+    const maxTextLen = h * 0.85;
+    if (targetCtx.measureText(displayText).width > maxTextLen) {
       while (
         displayText.length > 1 &&
-        targetCtx.measureText(displayText + '…').width > maxTextW
+        targetCtx.measureText(displayText + '…').width > maxTextLen
       ) {
         displayText = displayText.slice(0, -1);
       }
       displayText += '…';
     }
 
+    // Posisi: kiri canvas (12% dari kiri), tengah vertikal.
+    // Rotasi -90° agar teks terbaca dari bawah ke atas.
+    targetCtx.translate(w * 0.12, h / 2);
+    targetCtx.rotate(-Math.PI / 2);
+
     const padX = Math.round(fontSize * 0.7);
     const padY = Math.round(fontSize * 0.4);
     const textWidth = targetCtx.measureText(displayText).width;
     const boxW = textWidth + padX * 2;
     const boxH = fontSize + padY * 2;
-    const boxX = (w - boxW) / 2;
-    const cy = h - Math.round(w * 0.10);
-    const boxY = cy - boxH / 2;
 
     // Latar putih
     targetCtx.fillStyle = '#ffffff';
-    targetCtx.fillRect(boxX, boxY, boxW, boxH);
+    targetCtx.fillRect(-boxW / 2, -boxH / 2, boxW, boxH);
 
     // Border hitam
     targetCtx.lineWidth = Math.max(2, w * 0.005);
     targetCtx.strokeStyle = '#000000';
-    targetCtx.strokeRect(boxX, boxY, boxW, boxH);
+    targetCtx.strokeRect(-boxW / 2, -boxH / 2, boxW, boxH);
 
     // Teks hitam
     targetCtx.fillStyle = '#000000';
-    targetCtx.fillText(displayText, w / 2, cy);
+    targetCtx.fillText(displayText, 0, 0);
 
     targetCtx.restore();
   }
@@ -545,7 +548,7 @@
       drawTimer(ctx, remaining, w, h);
     }
 
-    // Overlay text
+    // Overlay text (vertikal kiri-tengah)
     if (s.overlayText) {
       drawOverlayText(ctx, s.overlayText, w, h);
     }
@@ -963,7 +966,9 @@
     dom.showTimer.checked = s.showTimer !== false;
     dom.showSound.checked = s.showSound !== false;
     dom.showBackground.checked = s.showBackground;
-    dom.overlayTextInput.value = s.overlayText || '';
+    if (dom.overlayTextInput) {
+      dom.overlayTextInput.value = s.overlayText || '';
+    }
 
     dom.tabButtons.forEach((b) =>
       b.classList.toggle('active', b.dataset.obj === state.activeObjectKey)
@@ -1094,9 +1099,11 @@
       mutateSettings((s) => { s.showBackground = e.target.checked; });
     });
 
-    dom.overlayTextInput.addEventListener('input', (e) => {
-      mutateSettings((s) => { s.overlayText = e.target.value; });
-    });
+    if (dom.overlayTextInput) {
+      dom.overlayTextInput.addEventListener('input', (e) => {
+        mutateSettings((s) => { s.overlayText = e.target.value; });
+      });
+    }
 
     dom.resolutionSelect.addEventListener('change', () => {
       const [w, h] = dom.resolutionSelect.value.split('x').map(Number);
@@ -1661,7 +1668,10 @@
     if (state.presets.length > 0) {
       for (const item of state.items) {
         for (const preset of state.presets) {
-          jobs.push({ item, settings: deepClone(preset.settings), presetName: preset.name });
+          const s = deepClone(preset.settings);
+          // JSON/preset mode → teks overlay mengikuti nama preset
+          s.overlayText = preset.name;
+          jobs.push({ item, settings: s, presetName: preset.name });
         }
       }
     } else {
