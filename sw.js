@@ -6,7 +6,7 @@
  *   - CDN pihak ketiga (esm.run dll)   → network-only (tidak di-cache)
  */
 
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v7';
 const STATIC_CACHE = `shape-rotator-static-${CACHE_VERSION}`;
 const PRECACHE_URLS = [
   './',
