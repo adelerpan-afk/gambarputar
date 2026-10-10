@@ -2,7 +2,7 @@
   "name": "Shape Rotator — Batch Video Puzzle",
   "short_name": "Shape Rotator",
   "description": "Batch rotator: proses banyak gambar × banyak preset menjadi video MP4 puzzle 60 detik untuk YouTube Shorts.",
-  "id": "/shape-rotator/",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
