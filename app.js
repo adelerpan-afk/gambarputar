@@ -7,15 +7,21 @@
   const BASE_WIDTH = 540;
   const BASE_HEIGHT = 960;
   const BACKGROUND_COLOR = '#1a1a2e';
-  const PNG_BACKGROUND_COLOR = '#ffffff'; // latar untuk format transparan
+  const PNG_BACKGROUND_COLOR = '#ffffff';
 
-  // Format yang mungkin punya transparansi → butuh latar putih
   const TRANSPARENT_MIME_TYPES = [
     'image/png',
     'image/gif',
     'image/webp',
     'image/svg+xml',
   ];
+
+  // Gambar (background & di dalam shape) di-cover ke 90% area
+  const IMAGE_AREA_SCALE = 0.9;
+  // Gambar di dalam shape di-scale 0.9 di sekitar center shape
+  const SHAPE_IMAGE_SCALE = 0.9;
+  // Warna latar dalam shape (agar tidak transparan)
+  const SHAPE_FILL_COLOR = '#ffffff';
 
   const ENCODER_QUEUE_HIGH = 8;
   const ENCODER_QUEUE_LOW = 4;
@@ -69,11 +75,6 @@
       .slice(0, 60) || 'video';
   }
 
-  /**
-   * Deteksi apakah sumber gambar mungkin punya transparansi
-   * (PNG, GIF, WebP, SVG). Untuk file, cek MIME dan ekstensi.
-   * Untuk dataURL, cek prefix mime.
-   */
   function sourceMayHaveTransparency(source) {
     if (!source) return false;
 
@@ -81,8 +82,6 @@
       const f = source.file;
       const mime = (f.type || '').toLowerCase();
       if (mime && TRANSPARENT_MIME_TYPES.includes(mime)) return true;
-
-      // fallback: cek ekstensi kalau MIME kosong
       if (typeof f.name === 'string') {
         const ext = f.name.toLowerCase().split('.').pop();
         if (ext === 'png' || ext === 'gif' || ext === 'webp' || ext === 'svg') {
@@ -101,7 +100,6 @@
     return false;
   }
 
-  /** Warna latar yang tepat untuk sebuah item. */
   function getBackgroundColorFor(item) {
     return item && item.mayHaveTransparency
       ? PNG_BACKGROUND_COLOR
@@ -178,6 +176,7 @@
       showBackground: true,
       showTimer: true,
       showSound: true,
+      overlayText: '',   // teks overlay opsional
       objects: {
         A: defaultObject({ shape: 'circle', position: 'top', borderColor: '#e94560', duration: 4 }),
         B: defaultObject({ shape: 'hexagon', position: 'bottom', borderColor: '#f5a623', duration: 6, direction: 'counterclockwise' }),
@@ -218,7 +217,6 @@
       id: uid(),
       name,
       source,
-      // true → latar putih (PNG/GIF/WebP/SVG)
       mayHaveTransparency: sourceMayHaveTransparency(source),
       image: null,
       dataURL: null,
@@ -233,7 +231,6 @@
     const dataUrl = await resolveDataURL(item.source);
     if (!item.dataURL) item.dataURL = dataUrl;
 
-    // Setelah dapat dataURL, kadang MIME lebih akurat → refresh flag
     if (!item.mayHaveTransparency && typeof dataUrl === 'string') {
       const m = /^data:([^;,]+)/i.exec(dataUrl);
       const mime = m ? m[1].toLowerCase() : '';
@@ -305,6 +302,7 @@
     showTimer: $('showTimer'),
     showSound: $('showSound'),
     showBackground: $('showBackground'),
+    overlayTextInput: $('overlayTextInput'),
 
     btnPlay: $('btnPlay'),
     btnReset: $('btnReset'),
@@ -346,6 +344,18 @@
 
   const getObjectY = (h, pos) => (pos === 'bottom' ? h * 0.7 : h * 0.3);
 
+  /**
+   * Gambar di-cover ke 90% area canvas (centered).
+   * Dipakai untuk background dan juga untuk isi shape.
+   */
+  function drawScaledImage(targetCtx, image, w, h) {
+    const iw = w * IMAGE_AREA_SCALE;
+    const ih = h * IMAGE_AREA_SCALE;
+    const ix = (w - iw) / 2;
+    const iy = (h - ih) / 2;
+    drawImageCover(targetCtx, image, ix, iy, iw, ih);
+  }
+
   function drawObject(targetCtx, obj, image, w, h, scale = 1) {
     const cx = w / 2;
     const cy = getObjectY(h, obj.position);
@@ -356,12 +366,24 @@
     targetCtx.rotate(obj.angle || 0);
     targetCtx.translate(-cx, -cy);
 
+    // ---- Isi shape ----
     targetCtx.save();
     traceShape(targetCtx, cx, cy, size, obj.shape);
     targetCtx.clip();
-    drawImageCover(targetCtx, image, 0, 0, w, h);
+
+    // Latar putih dalam shape (agar tidak transparan)
+    targetCtx.fillStyle = SHAPE_FILL_COLOR;
+    targetCtx.fillRect(0, 0, w, h);
+
+    // Gambar dikecilkan 90% di sekitar center shape
+    targetCtx.translate(cx, cy);
+    targetCtx.scale(SHAPE_IMAGE_SCALE, SHAPE_IMAGE_SCALE);
+    targetCtx.translate(-cx, -cy);
+    drawScaledImage(targetCtx, image, w, h);
+
     targetCtx.restore();
 
+    // ---- Border shape ----
     if (obj.showBorder) {
       targetCtx.strokeStyle = obj.borderColor;
       targetCtx.lineWidth = 3 * scale;
@@ -374,28 +396,92 @@
     targetCtx.restore();
   }
 
+  /**
+   * Timer di dalam circle putih dengan border hitam.
+   */
   function drawTimer(targetCtx, remaining, w, h) {
     const seconds = Math.max(0, Math.ceil(remaining));
     const isUrgent = seconds <= 5;
 
-    const pad = Math.round(w * 0.05);
-    const fontSize = Math.round(w * 0.14);
+    const radius = Math.round(w * 0.13);
+    const pad = Math.round(w * 0.03);
+    const cx = w / 2;
+    const cy = pad + radius;
+    const fontSize = Math.round(radius * 1.1);
     const red = isUrgent ? '#ff0000' : '#ff2b2b';
+
+    targetCtx.save();
+
+    // Circle putih + border hitam
+    targetCtx.beginPath();
+    targetCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+    targetCtx.fillStyle = '#ffffff';
+    targetCtx.fill();
+    targetCtx.lineWidth = Math.max(3, w * 0.008);
+    targetCtx.strokeStyle = '#000000';
+    targetCtx.stroke();
+
+    // Teks timer merah
+    targetCtx.font = `bold ${fontSize}px "Segoe UI", "Helvetica Neue", sans-serif`;
+    targetCtx.textAlign = 'center';
+    targetCtx.textBaseline = 'middle';
+    targetCtx.fillStyle = red;
+    if (isUrgent) {
+      targetCtx.shadowColor = red;
+      targetCtx.shadowBlur = fontSize * 0.4;
+    }
+    targetCtx.fillText(String(seconds), cx, cy + fontSize * 0.05);
+
+    targetCtx.restore();
+  }
+
+  /**
+   * Overlay text di bagian bawah canvas — latar putih, border hitam, teks hitam.
+   */
+  function drawOverlayText(targetCtx, text, w, h) {
+    if (!text || !text.trim()) return;
+    let displayText = text.trim();
+
+    const fontSize = Math.round(w * 0.075);
 
     targetCtx.save();
     targetCtx.font = `bold ${fontSize}px "Segoe UI", "Helvetica Neue", sans-serif`;
     targetCtx.textAlign = 'center';
-    targetCtx.textBaseline = 'top';
+    targetCtx.textBaseline = 'middle';
 
-    targetCtx.shadowColor = red;
-    targetCtx.shadowBlur = isUrgent ? fontSize * 0.55 : fontSize * 0.35;
-    targetCtx.fillStyle = red;
-    targetCtx.fillText(String(seconds), w / 2, pad);
+    // Truncate kalau kepanjangan
+    const maxTextW = w * 0.85;
+    if (targetCtx.measureText(displayText).width > maxTextW) {
+      while (
+        displayText.length > 1 &&
+        targetCtx.measureText(displayText + '…').width > maxTextW
+      ) {
+        displayText = displayText.slice(0, -1);
+      }
+      displayText += '…';
+    }
 
-    targetCtx.shadowBlur = 0;
-    targetCtx.lineWidth = Math.max(2, w * 0.004);
-    targetCtx.strokeStyle = '#5a0000';
-    targetCtx.strokeText(String(seconds), w / 2, pad);
+    const padX = Math.round(fontSize * 0.7);
+    const padY = Math.round(fontSize * 0.4);
+    const textWidth = targetCtx.measureText(displayText).width;
+    const boxW = textWidth + padX * 2;
+    const boxH = fontSize + padY * 2;
+    const boxX = (w - boxW) / 2;
+    const cy = h - Math.round(w * 0.10);
+    const boxY = cy - boxH / 2;
+
+    // Latar putih
+    targetCtx.fillStyle = '#ffffff';
+    targetCtx.fillRect(boxX, boxY, boxW, boxH);
+
+    // Border hitam
+    targetCtx.lineWidth = Math.max(2, w * 0.005);
+    targetCtx.strokeStyle = '#000000';
+    targetCtx.strokeRect(boxX, boxY, boxW, boxH);
+
+    // Teks hitam
+    targetCtx.fillStyle = '#000000';
+    targetCtx.fillText(displayText, w / 2, cy);
 
     targetCtx.restore();
   }
@@ -439,21 +525,29 @@
     }
 
     const s = state.settings;
-    // PNG/GIF/WebP/SVG → latar putih agar transparansi tidak jadi gelap
     const bg = getBackgroundColorFor(item);
     if (s.showBackground) {
       ctx.fillStyle = bg;
       ctx.fillRect(0, 0, w, h);
     }
 
-    drawImageCover(ctx, item.image, 0, 0, w, h);
+    // Background: gambar 90% area
+    drawScaledImage(ctx, item.image, w, h);
+
+    // Objek shape di atas
     for (const key of OBJECT_KEYS) {
       drawObject(ctx, s.objects[key], item.image, w, h, 1);
     }
 
+    // Timer dalam circle
     if (s.showTimer) {
       const remaining = (s.export.duration || FORCED_VIDEO_DURATION) - getElapsedForPreview();
       drawTimer(ctx, remaining, w, h);
+    }
+
+    // Overlay text
+    if (s.overlayText) {
+      drawOverlayText(ctx, s.overlayText, w, h);
     }
   }
 
@@ -465,7 +559,9 @@
       targetCtx.fillStyle = bgColor;
       targetCtx.fillRect(0, 0, w, h);
     }
-    drawImageCover(targetCtx, image, 0, 0, w, h);
+
+    // Background: gambar 90% area
+    drawScaledImage(targetCtx, image, w, h);
 
     for (const key of OBJECT_KEYS) {
       const obj = settings.objects[key];
@@ -477,6 +573,10 @@
     if (settings.showTimer) {
       const total = settings.export.duration || FORCED_VIDEO_DURATION;
       drawTimer(targetCtx, total - timeSec, w, h);
+    }
+
+    if (settings.overlayText) {
+      drawOverlayText(targetCtx, settings.overlayText, w, h);
     }
   }
 
@@ -564,7 +664,6 @@
     const thumb = document.createElement('img');
     thumb.className = 'thumb';
     thumb.alt = '';
-    // Thumbnail: pakai latar putih kalau PNG agar terlihat
     if (item.mayHaveTransparency) thumb.style.background = '#ffffff';
     if (item.dataURL || item.source.type === 'dataURL') {
       thumb.src = item.dataURL || item.source.data;
@@ -778,7 +877,6 @@
       try {
         const dataUrl = await resolveDataURL(item.source);
         item.dataURL = dataUrl;
-        // Refresh deteksi transparansi dari dataURL
         const m = /^data:([^;,]+)/i.exec(dataUrl);
         const mime = m ? m[1].toLowerCase() : '';
         if (TRANSPARENT_MIME_TYPES.includes(mime)) {
@@ -865,6 +963,7 @@
     dom.showTimer.checked = s.showTimer !== false;
     dom.showSound.checked = s.showSound !== false;
     dom.showBackground.checked = s.showBackground;
+    dom.overlayTextInput.value = s.overlayText || '';
 
     dom.tabButtons.forEach((b) =>
       b.classList.toggle('active', b.dataset.obj === state.activeObjectKey)
@@ -993,6 +1092,10 @@
 
     dom.showBackground.addEventListener('change', (e) => {
       mutateSettings((s) => { s.showBackground = e.target.checked; });
+    });
+
+    dom.overlayTextInput.addEventListener('input', (e) => {
+      mutateSettings((s) => { s.overlayText = e.target.value; });
     });
 
     dom.resolutionSelect.addEventListener('change', () => {
@@ -1138,6 +1241,9 @@
     }
     if (typeof override.showSound === 'boolean') {
       result.showSound = override.showSound;
+    }
+    if (typeof override.overlayText === 'string') {
+      result.overlayText = override.overlayText;
     }
     if (override.objects && typeof override.objects === 'object') {
       for (const key of OBJECT_KEYS) {
@@ -1362,7 +1468,7 @@
   async function renderImageToMp4(image, settings, opts, onProgress) {
     const {
       fps, duration, width, height, bitrate, includeAudio,
-      bgColor = BACKGROUND_COLOR, // latar kanvas
+      bgColor = BACKGROUND_COLOR,
     } = opts;
 
     const { Muxer, ArrayBufferTarget } = await loadMuxerModule();
@@ -1424,11 +1530,9 @@
     }
 
     try {
-      // ============ 1. Encode VIDEO ============
       for (let frame = 0; frame < totalFrames; frame++) {
         if (videoError) throw videoError;
 
-        // Teruskan bgColor agar PNG/GIF dapat latar putih
         renderToCanvas(exportCtx, image, settings, width, height, frame / fps, bgColor);
 
         const videoFrame = new VideoFrame(exportCanvas, {
@@ -1446,7 +1550,6 @@
 
       await videoEncoder.flush();
 
-      // ============ 2. Encode AUDIO ============
       if (audioEncoder) {
         const audioBuffer = await generateTickAudioBuffer(duration, URGENT_THRESHOLD_SEC);
         const channelData = audioBuffer.getChannelData(0);
@@ -1513,7 +1616,6 @@
     const opts = {
       ...settings.export,
       includeAudio: settings.showSound !== false,
-      // PNG/GIF/WebP/SVG → latar putih
       bgColor: getBackgroundColorFor(item),
     };
 
@@ -1636,7 +1738,6 @@
         height: settings.export.height ?? 960,
         bitrate: settings.export.bitrate ?? 5000000,
         includeAudio: settings.showSound !== false,
-        // PNG/GIF/WebP/SVG → latar putih
         bgColor: getBackgroundColorFor(item),
       };
 
