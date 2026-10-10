@@ -456,3 +456,17 @@ input[type="color"] { width: 38px; height: 32px; border: none; border-radius: 6p
   background: rgba(245, 166, 35, 0.15);
   color: var(--c-accent-warm);
 }
+
+.text-input {
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--c-panel-bg);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--c-text);
+  font-size: 0.88em;
+  outline: none;
+  font-family: inherit;
+}
+.text-input:focus { border-color: var(--c-accent); }
+.text-input::placeholder { color: var(--c-text-dimmer); }
