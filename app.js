@@ -17,9 +17,9 @@
   ];
 
   // Gambar (background & di dalam shape) di-cover ke 90% area
-  const IMAGE_AREA_SCALE = 0.9;
+  const IMAGE_AREA_SCALE = 1.0;
   // Gambar di dalam shape di-scale 0.9 di sekitar center shape
-  const SHAPE_IMAGE_SCALE = 0.9;
+  const SHAPE_IMAGE_SCALE = 1.0;
   // Warna latar dalam shape (agar tidak transparan)
   const SHAPE_FILL_COLOR = '#ffffff';
 
